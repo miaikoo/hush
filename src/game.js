@@ -378,7 +378,6 @@ export class Game {
     // --- Tally marks
     I.add({
       object: w.tally.mesh,
-      highlight: false,
       prompt: () => '[E] Look closer',
       action: () => ui.message(`Scratches in the plaster. You count them. ${BASE_TALLY + this.loops}.`, 4.5),
     });

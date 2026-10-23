@@ -485,6 +485,17 @@ button:hover {
   font-weight: normal;
 }
 
+/* title buttons wait while shaders compile in the background */
+button:disabled {
+  opacity: 0.45;
+  cursor: progress;
+  animation: preparing 1.6s ease-in-out infinite;
+}
+
+@keyframes preparing {
+  50% { opacity: 0.25; }
+}
+
 .fps {
   position: fixed;
   left: 50%;

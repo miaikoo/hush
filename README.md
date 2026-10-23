@@ -21,7 +21,14 @@ npm install
 npm run dev       # http://localhost:5173
 npm run build     # production build in dist/
 npm run preview   # serve the production build
+npm run optimize  # regenerate public/ from assets-src/ (only after changing source assets)
 ```
+
+### Deploying
+
+`npm run build` produces a static site in `dist/`; upload that folder to any static host (GitHub Pages,
+Netlify, Vercel, itch.io...). Paths are relative (`base: './'`), so it also works from a subfolder.
+The first visit downloads **~8.3 MB in ~46 requests**.
 
 Headphones are recommended: all sound is positional.
 
@@ -69,7 +76,7 @@ to the start, and the house remembers how many times you've been there.
 | Environment | Indoor house built from geometry, `FogExp2` (density driven by fear), HDRI environment map (PMREM) for PBR reflections, night sky seen through the window | `src/house.js`, `src/scene.js` |
 | Geometry / material / mesh | Walls with door/window openings generated from `BoxGeometry` with world-space UVs; procedural props (key, music box, coat rack, fuse, bulbs…); every library book is one `InstancedMesh` (1 draw call) | `src/house.js`, `src/props.js` |
 | Scene graph (parent–child) | `head → camera → flashlight (SpotLight) + hand model`; `doorPivot → door → knobs`; `musicBox → lidPivot → lid`; `rockPivot → chair` | `src/player.js`, `src/doors.js`, `src/props.js` |
-| GLTF / GLB | 21 furniture/prop models loaded with `GLTFLoader` | `src/assets.js` |
+| GLTF / GLB | 21 furniture/prop models loaded with `GLTFLoader` as single `.glb` files (WebP textures, meshopt-compressed geometry decoded by `MeshoptDecoder`) | `src/assets.js`, `scripts/optimize-assets.mjs` |
 | PBR material | `MeshStandardMaterial` with color/roughness/normal maps; metallic brass key and knobs reflect the HDRI | `src/house.js`, `src/props.js` |
 | Lighting | Hemisphere (ambient), moonlight `SpotLight` through the window, flashlight `SpotLight`, `PointLight` lamps with emissive bulbs, a flickering hallway lamp | `src/scene.js`, `src/animation.js` |
 | Shadow | Flashlight and moonlight cast shadows (window cross pattern on the floor). **Shadows are the core puzzle:** hallucinated keys have `castShadow = false` | `src/player.js`, `src/game.js` |
@@ -85,6 +92,25 @@ to the start, and the house remembers how many times you've been there.
 
 ### Performance
 
+Target: a laptop's built-in GPU on a slow connection.
+
+**Download (42 MB → 8.3 MB, ~150 → 46 requests).** `scripts/optimize-assets.mjs` builds `public/` from the
+original Poly Haven files in `assets-src/`: each model becomes one `.glb` (geometry + textures in one request)
+with WebP textures (512 px for small props, 1K for large furniture) and meshopt-compressed geometry; room
+textures become WebP; the HDR environment map is downsampled to 256×128 (it's only used at 12% for faint
+reflections). Measured on the production build: playable after ~11 s on fast 4G, ~47 s on slow 4G (1.6 Mbps).
+
+**Startup.** Compiling the shader programs is most of the remaining wait. The title screen appears as soon as
+the downloads finish and the shaders compile behind it (the buttons say *Preparing the house…* until they're
+done). Per-shader error checking is off outside debug mode, since it forces each compile to finish on the spot,
+and glass materials are converted from `MeshPhysicalMaterial` to `MeshStandardMaterial` so they share programs.
+
+**Per frame (GPU).**
+- Built-in GPUs (Intel, AMD Radeon Graphics, ...) start at 75% render resolution, then adapt.
+- Tone mapping and sRGB conversion happen inside the fear post-processing shader instead of a separate
+  `OutputPass`: one full-screen pass less per frame.
+- The flashlight's shadow map (re-rendered every frame because the light moves) is 512×512; the moonlight
+  shadow is static and rendered once.
 - Only **2 shadow-casting lights** (flashlight, moonlight). Lamps are short-range `PointLight`s without shadows, sized so they don't leak through walls.
 - All walls are merged into a single mesh (1 draw call); all books are one `InstancedMesh`.
   The first version used a downloaded book model at ~44k triangles per book, which made the library
@@ -92,9 +118,8 @@ to the start, and the house remembers how many times you've been there.
 - A warm-up pass behind the loading screen uploads every texture and compiles every shader variant,
   so the first look at an object doesn't freeze the game (it was a 7 s freeze before).
 - Adaptive resolution lowers the render scale when the frame rate stays low (toggle the FPS readout with <kbd>`</kbd>).
-- 1K textures. Raycasts only test registered interactables plus walls.
-- Shaders are precompiled with `renderer.compileAsync` before the first frame.
-- Pixel ratio capped at 2.
+- Raycasts only test registered interactables plus walls.
+- Pixel ratio capped at 1 (then adaptive, down to 0.5).
 
 ---
 
@@ -119,10 +144,13 @@ src/
 ├── audio.js          procedural sound
 ├── textures.js       canvas-generated textures (notes, portrait, photo…)
 ├── ui.js / style.css HUD and screens
-public/
-├── models/           glTF models (Poly Haven)
-├── textures/         PBR texture sets (Poly Haven)
-└── environments/     HDRI (Poly Haven)
+scripts/
+└── optimize-assets.mjs  builds public/ from assets-src/ (npm run optimize)
+assets-src/              original Poly Haven files (not deployed)
+public/                  web-ready assets (generated)
+├── models/           one .glb per model
+├── textures/         PBR texture sets (WebP)
+└── environments/     HDR environment map
 ```
 
 The design document with the full concept and requirement traceability is in [DESIGN.md](DESIGN.md).

@@ -36,7 +36,7 @@ export class Player {
     spot.position.set(0.2, -0.2, -0.62);
     spot.target.position.set(0, 0, -2.5);
     spot.castShadow = true;
-    spot.shadow.mapSize.set(1024, 1024);
+    spot.shadow.mapSize.set(512, 512); // re-rendered every frame (the light moves), so kept small
     spot.shadow.camera.near = 0.1;
     spot.shadow.camera.far = 16;
     spot.shadow.bias = -0.0006;

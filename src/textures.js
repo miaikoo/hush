@@ -237,20 +237,25 @@ export function tallyTexture(count) {
   let x = 20, y = 30;
   for (let i = 0; i < count; i++) {
     const inGroup = i % 5;
-    ctx.strokeStyle = `rgba(30,22,15,${0.75 + r() * 0.2})`;
-    ctx.lineWidth = 3 + r() * 2;
-    ctx.beginPath();
+    let pts;
     if (inGroup < 4) {
       const lx = x + inGroup * 13 + r() * 3;
-      ctx.moveTo(lx, y + r() * 4);
-      ctx.lineTo(lx + (r() - 0.5) * 6, y + 55 + r() * 6);
+      pts = [lx, y + r() * 4, lx + (r() - 0.5) * 6, y + 55 + r() * 6];
     } else {
-      ctx.moveTo(x - 6, y + 48);
-      ctx.lineTo(x + 50, y + 8);
+      pts = [x - 6, y + 48, x + 50, y + 8];
       x += 78;
       if (x > w - 70) { x = 20; y += 80; }
     }
-    ctx.stroke();
+    // a gouge: pale plaster scraped up around a dark groove, so it reads on dark wallpaper
+    const width = 3 + r() * 2;
+    for (const [style, lw] of [[`rgba(214,198,170,${0.6 + r() * 0.2})`, width + 4], [`rgba(25,18,12,${0.8 + r() * 0.2})`, width]]) {
+      ctx.strokeStyle = style;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(pts[0], pts[1]);
+      ctx.lineTo(pts[2], pts[3]);
+      ctx.stroke();
+    }
   }
   return toTexture(c);
 }
@@ -339,5 +344,57 @@ export function footprintsTexture() {
     ctx.ellipse(x, y + 55, 18, 20, 0, 0, Math.PI * 2);
     ctx.fill();
   }
+  return toTexture(c);
+}
+
+// Dim oil paintings for the empty frames (left empty, their black glass read as mirrors).
+// kind 0: this house at night, one lit window. kind 1: an empty field and a far-off figure.
+export function paintingTexture(kind = 0) {
+  const w = 512, h = 384;
+  const [c, ctx] = canvas(w, h);
+  const r = rng(11 + kind * 7);
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, kind ? '#5a5a4c' : '#3c4664');
+  sky.addColorStop(0.6, kind ? '#8a7f62' : '#76707a');
+  sky.addColorStop(1, '#16130e');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  const horizon = h * (kind ? 0.62 : 0.7);
+  ctx.fillStyle = kind ? '#4a4030' : '#2e2a20';
+  ctx.beginPath();
+  ctx.moveTo(0, horizon);
+  for (let x = 0; x <= w; x += 32) ctx.lineTo(x, horizon + Math.sin(x * 0.02 + kind) * 8);
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.fill();
+  if (kind === 0) {
+    // the house: dark gable, one warm window
+    ctx.fillStyle = '#0e0d0b';
+    ctx.fillRect(w * 0.38, horizon - 110, 130, 115);
+    ctx.beginPath();
+    ctx.moveTo(w * 0.38 - 10, horizon - 110);
+    ctx.lineTo(w * 0.38 + 65, horizon - 170);
+    ctx.lineTo(w * 0.38 + 140, horizon - 110);
+    ctx.fill();
+    ctx.fillStyle = '#f0c060';
+    ctx.fillRect(w * 0.38 + 80, horizon - 80, 18, 22);
+  } else {
+    // a single figure, too far away to have a face
+    ctx.fillStyle = '#0d0c0a';
+    ctx.fillRect(w * 0.7, horizon - 34, 7, 30);
+    ctx.beginPath();
+    ctx.arc(w * 0.7 + 3.5, horizon - 38, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // brush texture, varnish crackle and darkening at the edges
+  for (let i = 0; i < 1400; i++) {
+    ctx.fillStyle = `rgba(${r() < 0.5 ? '255,240,210' : '0,0,0'},${0.03 + r() * 0.04})`;
+    ctx.fillRect(r() * w, r() * h, 6 + r() * 18, 2 + r() * 3);
+  }
+  const v = ctx.createRadialGradient(w / 2, h / 2, h * 0.2, w / 2, h / 2, w * 0.65);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(10,6,2,0.55)');
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, w, h);
   return toTexture(c);
 }

@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { softDotTexture } from './textures.js';
 
 // ---------------------------------------------------------------- post-processing
 
-// Full-screen fear shader. Runs after tone mapping (OutputPass), on display colors.
+// Full-screen fear shader. It also does the tone mapping + sRGB conversion that a
+// separate OutputPass used to do, which saves a whole full-screen pass per frame.
 const FearShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -19,6 +19,7 @@ const FearShader = {
     uWhite: { value: 0 }, // fade to white (escape)
     uBreath: { value: 0 }, // calm while breathing
     uAspect: { value: 1 },
+    toneMappingExposure: { value: 1 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -51,6 +52,13 @@ const FearShader = {
       col.g = texture2D(tDiffuse, uv).g;
       col.b = texture2D(tDiffuse, uv - c * ca).b;
 
+      // tone mapping + sRGB output: three.js injects toneMapping() and
+      // linearToOutputTexel() into ShaderMaterials rendered to the screen
+      #ifdef TONE_MAPPING
+      col = toneMapping(col);
+      #endif
+      col = linearToOutputTexel(vec4(col, 1.0)).rgb;
+
       // drain color
       float l = dot(col, vec3(0.299, 0.587, 0.114));
       col = mix(col, vec3(l), smoothstep(0.3, 0.9, fear) * 0.75 * (1.0 - uBreath * 0.5));
@@ -76,8 +84,7 @@ const FearShader = {
 export function createPostProcessing(renderer, scene, camera) {
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new OutputPass()); // tone mapping + sRGB conversion
-  const fear = new ShaderPass(FearShader);
+  const fear = new ShaderPass(FearShader); // also does tone mapping + sRGB (see the shader)
   composer.addPass(fear);
   const resize = () => {
     composer.setPixelRatio(renderer.getPixelRatio());

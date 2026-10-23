@@ -50,10 +50,30 @@ window.addEventListener('resize', () => {
   post.resize();
 });
 
-// Warm-up, hidden behind the loading screen. Without it, the first look at each object
-// freezes the game while its shaders compile and its textures upload to the GPU.
-await renderer.compileAsync(scene, camera);
-await warmUp();
+// Warm-up. Without it, the first look at each object freezes the game while its
+// shaders compile and its textures upload to the GPU. Compiling ~50 shader programs
+// takes several seconds (Chrome on Windows translates each to Direct3D), so it runs
+// in the background while the title screen is up: the title's background is opaque,
+// and its buttons wait until the house is ready.
+// Checking every shader for compile errors forces each one to finish compiling on
+// the spot (a synchronous stall); the deployed game skips that, debug mode keeps it.
+renderer.debug.checkShaderErrors = DEBUG;
+let titleButtons = null;
+if (!DEBUG) {
+  // show the title (with its buttons waiting) and let it paint before compiling starts
+  ui.show('title');
+  titleButtons = [...document.querySelectorAll('#title button')].map((b) => {
+    const label = b.textContent;
+    b.disabled = true;
+    b.textContent = 'Preparing the house…';
+    return { b, label };
+  });
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+}
+const ready = (async () => {
+  await renderer.compileAsync(scene, camera);
+  await warmUp();
+})();
 
 async function warmUp() {
   // 1. upload every texture now
@@ -93,8 +113,17 @@ async function warmUp() {
   game.resetWorld();
 }
 
-if (DEBUG) setupDebug();
-else ui.show('title');
+if (DEBUG) {
+  await ready;
+  setupDebug();
+} else {
+  ready.then(() => {
+    for (const { b, label } of titleButtons) {
+      b.disabled = false;
+      b.textContent = label;
+    }
+  });
+}
 
 // Adaptive resolution: if the frame rate drops, render fewer pixels;
 // raise it back when there's headroom. Toggle the FPS readout with the ` key.
@@ -112,9 +141,19 @@ const gpuName = (() => {
   const raw = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
   return String(raw).replace(/^ANGLE \((.*)\)$/, '$1').split(',').slice(0, 2).join(',');
 })();
-if (/swiftshader|basic render|llvmpipe|software/i.test(gpuName)) {
+const software = /swiftshader|basic render|llvmpipe|software/i.test(gpuName);
+if (software) {
   document.querySelector('#title .small:last-child').innerHTML =
     '<b style="color:#c43a30">Hardware acceleration is off — the game is rendering on the CPU.</b><br>Enable it in your browser settings (System → "Use graphics acceleration") and restart the browser.';
+}
+// Built-in (integrated) GPUs start at a lower resolution instead of stuttering for
+// the ~9 s the adaptive logic needs to notice; it still climbs back up if there's headroom.
+const integrated = /intel|uhd|iris|radeon\(tm\) graphics|radeon graphics|vega|7[68]0m|mali|adreno/i.test(gpuName);
+if (software || integrated) {
+  quality.ratio = Math.max(quality.min, Math.min(quality.max, software ? 0.5 : 0.75));
+  renderer.setPixelRatio(quality.ratio);
+  post.resize();
+  dust.uniforms.uPixelRatio.value = quality.ratio;
 }
 
 function adaptQuality(rawDt) {

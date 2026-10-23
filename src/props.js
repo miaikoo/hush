@@ -58,6 +58,21 @@ function wallPoint(room, wall, along, y, out = 0) {
   return { p, n, rotY: WALL_ROT[wall] };
 }
 
+// Give an empty picture frame a painting. These frames have an "artwork" mesh
+// (black in the original) behind an opaque glass pane, which read as a mirror.
+// The artwork gets the painting; the pane becomes a faint transparent sheen.
+function fillFrame(frame, map) {
+  map.flipY = false; // glTF UVs expect unflipped textures; canvas textures default to flipped
+  const art = new THREE.MeshStandardMaterial({ map, roughness: 0.6, metalness: 0 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.08, transparent: true, opacity: 0.08, depthWrite: false });
+  frame.traverse((o) => {
+    if (!o.isMesh) return;
+    if (/artwork/i.test(o.material.name)) o.material = art;
+    else if (/glass/i.test(o.material.name) || o.material.name === '') o.material = glass;
+  });
+  return frame;
+}
+
 // Raycast straight down onto an object to find the surface height at (x, z).
 function surfaceY(obj, x, z, fromY = H) {
   _ray.set(new THREE.Vector3(x, fromY, z), DOWN);
@@ -492,9 +507,9 @@ export function buildProps({ models, textures, houseMats }) {
   world.fuseBox = { object: fuseBox, mixer, openAction, ledMat, fuseInside, opened: false };
 
   // Tally marks scratched into the wall next to the fuse box.
-  const tallyMesh = makeDecal(tex.tallyTexture(0), 0.56, 0.28, { opacity: 0.9 });
+  const tallyMesh = makeDecal(tex.tallyTexture(0), 1.1, 0.55, { opacity: 0.95 });
   {
-    const { p, rotY } = wallPoint('hallway', 'N', 5.25, 1.25, 0.004);
+    const { p, rotY } = wallPoint('hallway', 'N', 4.25, 1.45, 0.004); // eye level, between the study door and the fuse box
     tallyMesh.position.copy(p);
     tallyMesh.rotation.y = rotY;
   }
@@ -537,8 +552,8 @@ export function buildProps({ models, textures, houseMats }) {
   add(photo.group);
   world.familyPhoto = { object: photo.group, material: photoMat };
 
-  world.hallFrame = add(alignWall(model('hanging_picture_frame_02'), 'hallway', 'N', -0.5, { y: 1.45 }));
-  add(alignWall(model('hanging_picture_frame_01'), 'hallway', 'S', 2.1, { y: 1.25 }));
+  world.hallFrame = add(fillFrame(alignWall(model('hanging_picture_frame_02'), 'hallway', 'N', -0.5, { y: 1.45 }), tex.paintingTexture(0)));
+  add(fillFrame(alignWall(model('hanging_picture_frame_01'), 'hallway', 'S', 2.1, { y: 1.25 }), tex.paintingTexture(1)));
 
   const hallA = makeHangingBulb(-3.5, 0.45);
   const hallB = makeHangingBulb(2.9, 0.45);
@@ -569,7 +584,8 @@ export function buildProps({ models, textures, houseMats }) {
   _box.setFromObject(shelfA);
   const shelfZ = (_box.min.z + _box.max.z) / 2;
   const shelves = shelfHeights(shelfA, -4.4, shelfZ);
-  const third = shelves[Math.min(2, shelves.length - 1)] ?? 1.0;
+  // "Third shelf": the third from the top, at chest height (~1.3 m), not down by your knees
+  const third = shelves.length ? shelves.reduce((best, y) => (Math.abs(y - 1.28) < Math.abs(best - 1.28) ? y : best)) : 1.28;
 
   // "Third shelf. Behind the red books." — a row of red books hiding the fuse.
   const redBooks = new THREE.Group();
@@ -589,7 +605,12 @@ export function buildProps({ models, textures, houseMats }) {
   world.redBooks = { object: redBooks, rest: redBooks.position.clone() };
 
   const fuse = makeFuse();
-  fuse.position.set(-4.4 + 0.02, third + 0.016, shelfZ - 0.1);
+  fuse.position.set(-4.4 + 0.02, third + 0.016, shelfZ - 0.07);
+  // the fuse is tiny (7 cm); an invisible, larger box around it is what the raycast hits
+  const fuseHit = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  fuseHit.userData.keepMaterial = true;
+  fuseHit.castShadow = fuseHit.receiveShadow = false;
+  fuse.add(fuseHit);
   add(fuse);
   world.fuse = fuse;
 
@@ -600,7 +621,7 @@ export function buildProps({ models, textures, houseMats }) {
   shelves.forEach((y, i) => {
     if (i === shelves.length - 1) return; // top of the shelf
     const room = Math.min(0.32, shelves[i + 1] - y - 0.03);
-    fillShelf(books, -4.4, y, shelfZ, 1.12, room, rand, i === 2 ? [-4.66, -4.18] : null);
+    fillShelf(books, -4.4, y, shelfZ, 1.12, room, rand, y === third ? [-4.66, -4.18] : null); // leave room for the red books
   });
   shelvesB.forEach((y, i) => {
     if (i === shelvesB.length - 1 || i === 1) return;
@@ -646,7 +667,7 @@ export function buildProps({ models, textures, houseMats }) {
   world.radio = { object: radio, dialMats, on: false };
 
   add(align(model('ArmChair_01'), { x: -1.0, z: -6.55, rotY: -0.76 }), true);
-  add(alignWall(model('hanging_picture_frame_01'), 'library', 'E', -4.5, { y: 1.35 }));
+  add(fillFrame(alignWall(model('hanging_picture_frame_01'), 'library', 'E', -4.5, { y: 1.35 }), tex.paintingTexture(1)));
 
   // ================================================================ STUDY
   const sDesk = add(alignWall(model('wooden_table_02'), 'study', 'N', 1.9), true);
