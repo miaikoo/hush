@@ -11,14 +11,22 @@ import { noteTexture, familyPhotoTexture } from './textures.js';
 //
 // States: title → intro → playing ⇄ (inspecting | paused) → ending → end
 
-const CHECKLIST = [
-  { id: 'entrance', text: 'Check main entrance' },
-  { id: 'light', text: 'Locate a light source' },
-  { id: 'fuse', text: 'Find a replacement fuse' },
-  { id: 'power', text: 'Restore power' },
-  { id: 'key', text: 'Find the spare key' },
-  { id: 'leave', text: 'Leave' },
+// The clipboard is a real inspection form: restore the power and check each item
+// listed under each room, worded the way an inspector would write it. It says what
+// to inspect, never where it is or how to get to it. You don't even try the front
+// door until the job is done.
+const INSPECTION = [
+  { label: 'Foyer', items: ['mirror', 'clock'] },
+  { label: 'Hallway', items: ['portrait', 'photo', 'painting', 'tally'] },
+  { label: 'Library', items: ['radio', 'deskNote', 'shelf'] },
+  { label: 'Study', items: ['rocker', 'musicBox', 'studyNote'] },
 ];
+const ITEM_NAMES = {
+  mirror: 'Mirror', clock: 'Clock',
+  portrait: 'Portrait', photo: 'Family photo', painting: 'Painting', tally: 'Wall damage',
+  radio: 'Radio', deskNote: 'Reading desk', shelf: 'Bookshelf',
+  rocker: 'Rocking chair', musicBox: 'Music box', studyNote: 'Writing desk',
+};
 
 const BASE_TALLY = 23;
 
@@ -183,12 +191,17 @@ export class Game {
       prompt: () => (f().key ? '[E] Unlock the door' : '[E] Open'),
       action: () => {
         if (f().key) return this.win();
+        // you don't leave a job half done
+        if (!this.jobDone) return ui.message(["Not yet. The form isn't finished.", "You don't leave a job half done.", 'The inspection comes first.'][Math.floor(Math.random() * 3)]);
         w.doors.front.rattle();
         this.sound.play('rattle', { at: w.doors.front.center, volume: 0.9 });
-        if (!this.done('entrance')) {
-          ui.message("Locked. You don't remember it closing.");
-          this.fear.add(TUNING.fear.lockedDoor);
+        if (!f().lockedIn) {
+          // the reveal: the job is done, and you can't get out
+          f().lockedIn = true;
           this.complete('entrance');
+          ui.message("Locked. You don't remember locking it.", 4);
+          this.fear.add(TUNING.fear.lockedDoor);
+          tweens.wait(4.5).then(() => this.state === 'playing' && ui.message('There was a spare key somewhere. There always is.', 4));
         } else {
           ui.message(['Still locked.', "It won't move.", 'Locked from the outside?'][Math.floor(Math.random() * 3)]);
         }
@@ -239,6 +252,7 @@ export class Game {
       object: w.deskNote,
       prompt: () => '[E] Read the note',
       action: () => {
+        this.note('deskNote');
         const lines = this.loops >= 2
           ? 'Third shelf.<br>Behind the red books.<br><br>STOP OPENING<br>THE DOOR.'
           : 'Third shelf.<br>Behind the red books.<br><br>You always forget.';
@@ -251,10 +265,12 @@ export class Game {
     I.add({
       object: w.studyNote,
       prompt: () => '[E] Read the note',
-      action: () =>
+      action: () => {
+        this.note('studyNote');
         this.inspect(w.studyNote, 'A note', "If it has no shadow,<br>it isn't there.", true, {
           baseRotation: new THREE.Euler(Math.PI / 2, 0, 0),
-        }),
+        });
+      },
     });
 
     // --- Bookshelf → fuse
@@ -263,6 +279,7 @@ export class Game {
       prompt: () => (f().booksMoved ? null : '[E] Move the red books'),
       action: () => {
         f().booksMoved = true;
+        this.note('shelf');
         const b = w.redBooks.object, rest = w.redBooks.rest;
         this.sound.play('paper', { at: rest, volume: 0.8, rate: 0.6 });
         tweens.add({
@@ -345,6 +362,7 @@ export class Game {
       object: w.radio.object,
       prompt: () => (w.radio.on ? '[E] Turn off the radio' : '[E] Turn on the radio'),
       action: () => {
+        this.note('radio');
         if (!f().power) return ui.message('Dead. It needs power.');
         this.setRadio(!w.radio.on);
       },
@@ -355,10 +373,11 @@ export class Game {
       object: w.familyPhoto.object,
       prompt: () => '[E] Look at the photo',
       action: () => {
+        this.note('photo');
         this.inspect(
           w.familyPhoto.object,
           'A photograph',
-          'A family in front of this house. They look happy.<br><br>One face has been scratched out.'
+          'A family in front of this house. They look happy.<br><br>One face has been scratched out.<br><br><i>Personal items left behind. Not my business.</i>'
         );
         if (!f().photoCalm) {
           f().photoCalm = true;
@@ -371,22 +390,60 @@ export class Game {
     I.add({
       object: w.portrait.object,
       prompt: () => '[E] Look closer',
-      action: () =>
-        this.inspect(w.portrait.object, 'A portrait', 'The paint is cracked and dark.<br><br>The eyes are painted on. Aren\'t they?'),
+      action: () => {
+        this.note('portrait');
+        this.inspect(w.portrait.object, 'A portrait', 'The paint is cracked and dark.<br><br>The eyes are painted on. Aren\'t they?<br><br><i>Oil on canvas. Varnish failing. Noted.</i>');
+      },
+    });
+
+    // --- Painting (hallway)
+    I.add({
+      object: w.hallFrame,
+      prompt: () => '[E] Look closer',
+      action: () => {
+        this.note('painting');
+        this.inspect(w.hallFrame, 'A painting', 'This house, at night. One window is lit.<br><br><i>Unsigned. Noted.</i>');
+      },
+    });
+
+    // --- Mirror (foyer)
+    I.add({
+      object: w.mirrorFrame,
+      prompt: () => '[E] Look closer',
+      action: () => {
+        this.note('mirror');
+        ui.message("Mirror, original to the house. The silvering's gone dark at the edges. Noted.", 4.5);
+      },
+    });
+
+    // --- Rocking chair (study)
+    I.add({
+      object: w.rocker,
+      prompt: () => '[E] Look closer',
+      action: () => {
+        this.note('rocker');
+        ui.message('A rocking chair. Still moving, slightly. Uneven floor. Noted.', 4.5);
+      },
     });
 
     // --- Tally marks
     I.add({
       object: w.tally.mesh,
       prompt: () => '[E] Look closer',
-      action: () => ui.message(`Scratches in the plaster. You count them. ${BASE_TALLY + this.loops}.`, 4.5),
+      action: () => {
+        this.note('tally');
+        ui.message(`Scratches in the plaster. You count them. ${BASE_TALLY + this.loops}. Someone was counting something.`, 4.5);
+      },
     });
 
     // --- Clock
     I.add({
       object: w.clock.object,
       prompt: () => '[E] Check the time',
-      action: () => ui.message('3:17. It was 3:17 when you came in.'),
+      action: () => {
+        this.note('clock');
+        ui.message('3:17. It was 3:17 when you came in.');
+      },
     });
 
     // --- Music box
@@ -398,8 +455,9 @@ export class Game {
           this.setMusicBox(false);
           this.fear.add(-3);
         } else {
+          this.note('musicBox');
           this.setMusicBox(true);
-          if (!f().keyEvent && f().power) this.keyEvent();
+          if (!f().keyEvent && f().lockedIn) this.keyEvent(); // the keys only come once you're locked in
         }
       },
     });
@@ -432,10 +490,45 @@ export class Game {
     this.refreshChecklist();
   }
 
+  // Marks one thing as inspected. Once the power is back and every room is
+  // complete, "Leave" appears on the form.
+  note(id) {
+    if (this.noted.has(id)) return;
+    this.noted.add(id);
+    this.sound.play('paper', { volume: 0.25, rate: 1.7 });
+    this.refreshChecklist();
+    this.checkJobDone();
+  }
+
+  checkJobDone() {
+    if (this.jobDone || !this.flags.power) return;
+    if (!INSPECTION.every((r) => r.items.every((id) => this.noted.has(id)))) return;
+    this.jobDone = true;
+    this.refreshChecklist();
+    tweens.wait(2.5).then(() => this.state === 'playing' && this.ui.message("That's everything. Time to go home.", 4));
+  }
+
+  // The form: power, then each room with its items, two per row. Once you're
+  // locked in, your own pen notes appear under it.
+  checklistItems() {
+    const f = this.flags;
+    const items = [{ text: 'Restore power', done: f.power }];
+    for (const r of INSPECTION) {
+      items.push({ header: r.label, done: r.items.every((id) => this.noted.has(id)) });
+      for (let i = 0; i < r.items.length; i += 2) {
+        items.push({ cells: r.items.slice(i, i + 2).map((id) => ({ text: ITEM_NAMES[id], done: this.noted.has(id) })) });
+      }
+    }
+    if (f.lockedIn) {
+      items.push({ text: 'front door locked. from OUTSIDE?', hand: true, note: true });
+      items.push({ text: 'find a spare key', hand: true, done: f.key });
+    }
+    if (this.jobDone) items.push({ text: 'Leave', done: this.done('leave') });
+    return items;
+  }
+
   refreshChecklist() {
-    this.ui.setChecklist(
-      CHECKLIST.map((c) => ({ text: c.text, done: this.completed.has(c.id), ghost: this.ghostTicks.has(c.id) }))
-    );
+    this.ui.setChecklist(this.checklistItems());
     const inv = [];
     if (this.flags.flashlight) inv.push('Flashlight');
     if (this.flags.fuse && !this.flags.power) inv.push('Fuse');
@@ -459,7 +552,9 @@ export class Game {
 
   resetWorld() {
     const w = this.world;
-    this.flags = { flashlight: false, fuse: false, booksMoved: false, power: false, keyEvent: false, key: false, photoCalm: false };
+    this.flags = { flashlight: false, fuse: false, booksMoved: false, power: false, keyEvent: false, key: false, photoCalm: false, lockedIn: false };
+    this.noted = new Set();
+    this.jobDone = false;
     this.completed = new Set();
     this.ghostTicks = new Set();
     this.switchState = { foyer: true, hallway: true };
@@ -515,7 +610,6 @@ export class Game {
       note.material.map = noteTexture(['Third shelf.', 'Behind the red books.', '', 'STOP OPENING', 'THE DOOR.'], 3);
       note.material.needsUpdate = true;
     }
-    if (this.loops >= 1) this.complete('entrance', true);
 
     this.updateLamps();
     this.refreshChecklist();
@@ -574,6 +668,7 @@ export class Game {
     this.audio.hum.start();
     this.complete('power');
     this.ui.message('The house hums back to life.');
+    this.checkJobDone();
     // a few seconds later, the study door opens on its own
     await tweens.wait(5);
     if (this.state === 'ending' || !this.flags.power) return;
@@ -859,7 +954,7 @@ export class Game {
       }
       this.figures.update(dt, this.player, this.fear.value);
       this.shifters.update(this.fear.value);
-      if (this.room === 'study' && this.flags.power && !this.flags.keyEvent && w.doors.study.isOpen) {
+      if (this.room === 'study' && this.flags.lockedIn && !this.flags.keyEvent && w.doors.study.isOpen) {
         const r = ROOMS.study;
         if (pos.z < r.maxZ - 0.9) this.keyEvent();
       }

@@ -1,180 +1,237 @@
 # HUSH
 
-A first-person psychological horror mini game built with **Three.js**.
-UTS Grafika Komputer — *Three.js Interactive 3D Project* · Topic: **Interactive Haunted House** · Category: **Mini Game 3D**
+Mini game horor psikologis *first-person* berbasis **Three.js**.
+UTS Grafika Komputer — *Three.js Interactive 3D Project* · Topik: **Interactive Haunted House** · Kategori: **Mini Game 3D**
 
 > *14 Hollow Lane. Empty for years. Routine job: inspect it before Monday's sale.*
 
-You are a home inspector locked inside an empty house. There is no monster. The only enemy is your
-**Fear**: it rises in the dark and distorts how the world is rendered, from flickering lights and
-drained colors to shapes at the edge of your vision and objects that aren't really there.
-Restore the power, find the spare key, and get out. Or so you think.
+![Judul](docs/screenshots/title.jpg)
 
 ---
 
-## Running the project
+## Anggota Kelompok
 
-Requirements: Node.js 18+.
+| Nama | NRP |
+|---|---|
+| Randi Palguna Artayasa  | 5025231020 |
+| Hikmia Sofia Nur Izzati | 5025231147 |
+
+---
+
+## Deskripsi
+
+Pemain berperan sebagai **inspektur rumah** yang ditugaskan memeriksa sebuah rumah kosong sebelum dijual.
+Tidak ada monster dan tidak ada *jumpscare*. Satu-satunya musuh adalah **Fear** (rasa takut) pemain sendiri:
+semakin lama berada dalam gelap, rasa takut naik dan **cara dunia di-render ikut berubah**: lampu berkedip,
+warna memudar, bayangan muncul di ujung penglihatan, dan benda-benda yang sebenarnya tidak ada.
+
+Pemain datang untuk bekerja: menyalakan kembali listrik dan memeriksa setiap ruangan. Setelah semua selesai
+dan pemain hendak pulang, barulah ia sadar pintu depan **terkunci dari luar**.
+
+| | |
+|---|---|
+| ![Foyer](docs/screenshots/foyer.jpg) | ![Perpustakaan](docs/screenshots/library.jpg) |
+| Foyer: pintu depan, mantel, cahaya bulan | Perpustakaan setelah listrik menyala |
+| ![Kunci](docs/screenshots/keys.jpg) | ![Fear tinggi](docs/screenshots/fear.jpg) |
+| Puzzle kunci: hanya satu yang asli | Ruangan yang sama saat Fear tinggi |
+
+---
+
+## Gameplay & Interaksi
+
+**Tujuan:** clipboard di pojok kiri atas adalah **formulir inspeksi**. Pemain harus **menyalakan listrik**
+dan **memeriksa setiap barang** yang tercantum di tiap ruangan (Foyer, Hallway, Library, Study), misalnya
+*Mirror, Clock, Wall damage*. Formulir hanya menyebutkan **apa** yang harus diperiksa, tidak pernah **di mana**
+letaknya atau **bagaimana** cara mencapainya. Setiap barang yang diperiksa memberi catatan singkat dari sudut
+pandang inspektur.
+
+**Alur permainan:**
+1. Rumah gelap total. Pemain mencari sumber cahaya (senter ada di saku mantel dekat pintu).
+2. Catatan di perpustakaan menunjuk ke rak buku; di balik **buku-buku merah** ada sekering.
+3. Sekering dipasang di **kotak sekering** di ujung lorong: listrik menyala, pintu ruang kerja (*study*) terbuka sendiri.
+4. Pemain memeriksa semua barang di formulir. Setelah lengkap, muncul baris **Leave**.
+5. Saat hendak keluar, pintu depan ternyata **terkunci**. Tulisan tangan pemain sendiri muncul di formulir:
+   *front door locked. from OUTSIDE?* dan *find a spare key*.
+6. Di ruang kerja muncul **empat kunci**, tetapi hanya satu yang asli.
+   *If it has no shadow, it isn't there*: kunci halusinasi **tidak memiliki bayangan**.
+7. Kunci asli membuka pintu depan, dan pemain keluar.
+
+**Fear (0–100):** naik di tempat gelap, saat menatap lukisan potret, saat kejadian aneh, dan saat menyentuh
+halusinasi. Turun di ruangan terang, saat menahan napas (*breathing*), di dekat radio, dan saat melihat foto
+keluarga. Semakin tinggi Fear, semakin banyak efek: lampu berkedip, kabut, vignette, warna pudar, *chromatic
+aberration*, sosok bayangan, suara detak jantung, kamera bergoyang, dan benda yang berpindah saat tidak dilihat.
+
+**Menang:** membuka pintu depan dengan kunci asli. **Kalah:** Fear mencapai 100 dan pemain pingsan.
+Setelah keduanya pemain bisa bermain lagi; rumah "mengingat" berapa kali pemain sudah ke sana (tanda goresan
+di dinding bertambah).
+
+**Interaksi (E / klik kiri):** membuka pintu; memeriksa catatan, foto, potret, lukisan, cermin dan kursi goyang
+(tampilan *inspect* 3D); mengambil senter, sekering, kunci, dan baterai; menyalakan saklar lampu, lampu minyak,
+radio, kotak sekering, dan kotak musik.
+
+![Inspect](docs/screenshots/inspect.jpg)
+
+---
+
+## Kontrol
+
+| Input | Aksi |
+|---|---|
+| Mouse | Melihat sekeliling |
+| W A S D | Bergerak |
+| E / Klik kiri | Interaksi (periksa, ambil, buka, nyalakan) |
+| F | Menyalakan / mematikan senter |
+| Tahan Space | Bernapas (menurunkan Fear, tetapi tidak bisa bergerak) |
+| Esc | Pause |
+| <kbd>`</kbd> | Menampilkan FPS dan resolusi render |
+
+Disarankan memakai **headphone**: semua suara bersifat posisional (3D).
+
+---
+
+## Fitur Grafika
+
+| Kebutuhan | Implementasi | File |
+|---|---|---|
+| Scene, camera, renderer | `WebGLRenderer` (ACES tone mapping, sRGB), `PerspectiveCamera`, render loop dengan `THREE.Timer` | `src/scene.js`, `src/main.js` |
+| Environment | Rumah dibangun dari geometri, `FogExp2` (kepadatan mengikuti Fear), environment map HDRI (PMREM) untuk pantulan PBR, langit malam di luar jendela | `src/house.js`, `src/scene.js` |
+| Geometry / material / mesh | Dinding dengan lubang pintu/jendela dari `BoxGeometry` dengan UV world-space; props prosedural (kunci, kotak musik, gantungan mantel, sekering, bohlam…); semua buku perpustakaan adalah satu `InstancedMesh` (1 draw call) | `src/house.js`, `src/props.js` |
+| Scene graph (parent–child) | `head → camera → senter (SpotLight) + model tangan`; `doorPivot → pintu → gagang`; `musicBox → lidPivot → tutup`; `rockPivot → kursi` | `src/player.js`, `src/doors.js`, `src/props.js` |
+| GLTF / GLB | 21 model furnitur/props dimuat dengan `GLTFLoader` sebagai file `.glb` (tekstur WebP, geometri terkompresi meshopt yang di-decode `MeshoptDecoder`) | `src/assets.js`, `scripts/optimize-assets.mjs` |
+| Material PBR | `MeshStandardMaterial` dengan color/roughness/normal map; kunci dan gagang pintu dari kuningan memantulkan HDRI | `src/house.js`, `src/props.js` |
+| Pencahayaan | Hemisphere (ambient), cahaya bulan `SpotLight` lewat jendela, senter `SpotLight`, lampu `PointLight` dengan bohlam emissive, lampu lorong yang berkedip | `src/scene.js`, `src/animation.js` |
+| Bayangan | Senter dan cahaya bulan menghasilkan bayangan (pola silang jendela di lantai). **Bayangan adalah inti puzzle:** kunci halusinasi memakai `castShadow = false` | `src/player.js`, `src/game.js` |
+| Animasi (6+) | Pintu berayun (tween), pintu kotak sekering (`AnimationMixer` + `AnimationClip` buatan sendiri), lampu berkedip (noise), tutup + penari kotak musik, kursi goyang, jarum jam, kamera sinematik di ending | `src/animation.js`, `src/game.js` |
+| Raycasting | `THREE.Raycaster` dari tengah layar untuk hover/interaksi (dinding menghalangi); raycast ke bawah untuk menaruh barang di permukaan furnitur dan mencari tinggi rak buku | `src/interaction.js`, `src/props.js` |
+| Interaksi (15+) | Lihat bagian *Gameplay & Interaksi* | `src/game.js` |
+| Feedback visual | Highlight saat hover (emissive), prompt, pintu bergetar, percikan api, efek *dissolve*, lampu menyala, efek layar | `src/interaction.js`, `src/effects.js` |
+| VFX | Shader post-processing Fear (vignette, desaturasi, chromatic aberration, grain, warp), partikel debu yang hanya terlihat di dalam kerucut senter (`ShaderMaterial` buatan sendiri), percikan sekering (`Points`), shader *dissolve* (`onBeforeCompile`), sosok bayangan di tepi pandangan, mata potret yang bercahaya | `src/effects.js`, `src/hallucinations.js` |
+| Kamera & proyeksi | `PointerLockControls` first-person, head bob, goyangan dan distorsi FOV mengikuti Fear; `THREE.Frustum` menentukan kapan benda boleh berpindah tanpa terlihat; sosok bayangan muncul tepat di tepi FOV horizontal | `src/player.js`, `src/hallucinations.js` |
+| UI / HUD | Clipboard formulir inspeksi (objektif), meter Fear, baterai, inventori, prompt, layar judul/intro/pause/akhir | `src/ui.js`, `src/style.css` |
+| Menang / Kalah / Restart | Kabur → layar akhir; Fear 100 → pingsan → layar akhir; Play again / Title | `src/game.js` |
+| Audio | Semua suara disintesis lewat kode (buffer Web Audio) dan diputar lewat `AudioListener` / `PositionalAudio` | `src/audio.js` |
+
+---
+
+## Cara Menjalankan
+
+Kebutuhan: **Node.js 18+** dan browser modern (Chrome/Edge/Firefox) dengan akselerasi hardware aktif.
 
 ```bash
+git clone https://github.com/miaikoo/hush.git
+cd <nama-folder-repository>
 npm install
-npm run dev       # http://localhost:5173
-npm run build     # production build in dist/
-npm run preview   # serve the production build
-npm run optimize  # regenerate public/ from assets-src/ (only after changing source assets)
+npm run dev
 ```
 
-### Deploying
+Lalu buka **http://localhost:5173** di browser, klik **Begin**, dan klik layar untuk mengunci mouse.
 
-`npm run build` produces a static site in `dist/`; upload that folder to any static host (GitHub Pages,
-Netlify, Vercel, itch.io...). Paths are relative (`base: './'`), so it also works from a subfolder.
-The first visit downloads **~8.3 MB in ~46 requests**.
+Perintah lain:
 
-Headphones are recommended: all sound is positional.
+```bash
+npm run build     # build produksi ke folder dist/
+npm run preview   # menjalankan hasil build produksi
+npm run optimize  # membuat ulang public/ dari assets-src/ (hanya jika aset sumber diubah)
+```
 
-### Controls
+**Deploy:** `npm run build` menghasilkan situs statis di `dist/` yang bisa diunggah ke hosting statis apa pun
+(GitHub Pages, Netlify, Vercel, itch.io). Path bersifat relatif (`base: './'`), jadi juga bisa dari subfolder.
 
-| Input | Action |
+**Mode debug:** `http://localhost:5173/?debug` langsung masuk ke permainan tanpa menu. Opsi tambahan:
+`&cam=x,z,yawDeg[,pitchDeg]`, `&fear=60` (Fear tetap), `&power`, `&flash`, `&lamps`, `&keys`, `&real=0..3`.
+
+---
+
+## Pembagian Kontribusi
+
+| Anggota | Kontribusi |
 |---|---|
-| Mouse | Look |
-| W A S D | Move |
-| E / Left click | Interact (inspect, take, open, activate) |
-| F | Toggle flashlight |
-| Hold Space | Breathe (lowers fear, but you can't move) |
-| Esc | Pause |
+| _(isi nama)_ | _(isi kontribusi, misalnya: konsep & desain game, gameplay, level/props, UI, testing)_ |
+| _(isi nama)_ | _(isi kontribusi)_ |
 
 ---
 
-## How to play
+## Challenge
 
-Follow the inspection checklist in the top-left corner:
-
-1. **Check main entrance:** the front door is locked.
-2. **Locate a light source:** there's a flashlight in the pocket of a coat that looks like yours.
-3. **Find a replacement fuse:** a note in the library tells you where.
-4. **Restore power:** the fuse box is at the end of the hallway.
-5. **Find the spare key:** in the study. Several keys appear, but only one is real.
-   *If it has no shadow, it isn't there.*
-6. **Leave.**
-
-**Fear (0–100):** rises in the dark, when you stare at the portrait, during unsettling events and
-when you touch hallucinations. It falls in lit rooms, while you breathe, near the radio, and when
-you look at the family photo. At **100** you collapse and lose. Fear tiers progressively add
-flicker, fog, vignette, desaturation, chromatic aberration, shadow figures, heartbeat audio,
-camera sway and objects that move while you're not looking.
-
-**Win:** unlock the front door and escape. **Lose:** fear reaches 100. Both endings bring you back
-to the start, and the house remembers how many times you've been there.
-
----
-
-## Computer graphics concepts used
-
-| Requirement | Implementation | Where |
-|---|---|---|
-| Scene, camera, renderer | `WebGLRenderer` (ACES tone mapping, sRGB), `PerspectiveCamera`, render loop with `THREE.Timer` | `src/scene.js`, `src/main.js` |
-| Environment | Indoor house built from geometry, `FogExp2` (density driven by fear), HDRI environment map (PMREM) for PBR reflections, night sky seen through the window | `src/house.js`, `src/scene.js` |
-| Geometry / material / mesh | Walls with door/window openings generated from `BoxGeometry` with world-space UVs; procedural props (key, music box, coat rack, fuse, bulbs…); every library book is one `InstancedMesh` (1 draw call) | `src/house.js`, `src/props.js` |
-| Scene graph (parent–child) | `head → camera → flashlight (SpotLight) + hand model`; `doorPivot → door → knobs`; `musicBox → lidPivot → lid`; `rockPivot → chair` | `src/player.js`, `src/doors.js`, `src/props.js` |
-| GLTF / GLB | 21 furniture/prop models loaded with `GLTFLoader` as single `.glb` files (WebP textures, meshopt-compressed geometry decoded by `MeshoptDecoder`) | `src/assets.js`, `scripts/optimize-assets.mjs` |
-| PBR material | `MeshStandardMaterial` with color/roughness/normal maps; metallic brass key and knobs reflect the HDRI | `src/house.js`, `src/props.js` |
-| Lighting | Hemisphere (ambient), moonlight `SpotLight` through the window, flashlight `SpotLight`, `PointLight` lamps with emissive bulbs, a flickering hallway lamp | `src/scene.js`, `src/animation.js` |
-| Shadow | Flashlight and moonlight cast shadows (window cross pattern on the floor). **Shadows are the core puzzle:** hallucinated keys have `castShadow = false` | `src/player.js`, `src/game.js` |
-| Animation (6+) | Door swings (tweens), fuse box door (`AnimationMixer` + authored `AnimationClip`), light flicker (noise), music box lid + dancer, rocking chair, clock hands, cinematic ending camera | `src/animation.js`, `src/game.js` |
-| Raycasting | `THREE.Raycaster` from the screen center for every hover/interaction (walls occlude); downward raycasts place items on furniture surfaces and find bookshelf shelves | `src/interaction.js`, `src/props.js` |
-| Interaction (15+) | Open doors, inspect notes/photo/portrait (3D inspect view), collect flashlight/fuse/key/batteries, flip light switches, light lamps, radio, fuse box, music box | `src/game.js` |
-| Visual feedback | Hover highlight (emissive), prompts, rattle shake, sparks, dissolve, lamp glow, screen effects | `src/interaction.js`, `src/effects.js` |
-| VFX | Post-processing fear shader (vignette, desaturation, chromatic aberration, grain, warp), dust particles lit only inside the flashlight cone (custom `ShaderMaterial`), fuse sparks (`Points`), dissolve shader (`onBeforeCompile`), peripheral shadow figures, emissive portrait eyes | `src/effects.js`, `src/hallucinations.js` |
-| Camera & projection | First-person `PointerLockControls`, head bob, fear-driven sway and FOV warp; `THREE.Frustum` decides when objects may move unseen; shadow figures spawn inside the horizontal FOV edge | `src/player.js`, `src/hallucinations.js` |
-| UI / HUD | Inspection clipboard (objectives), fear meter, battery, inventory, prompts, title/intro/pause/end screens | `src/ui.js`, `src/style.css` |
-| Win / Lose / Restart | Escape → loop; fear 100 → collapse → loop; Play again / Title | `src/game.js` |
-| Audio | All sounds synthesized in code (Web Audio buffers) and played via `AudioListener` / `PositionalAudio` | `src/audio.js` |
-
-### Performance
-
-Target: a laptop's built-in GPU on a slow connection.
-
-**Download (42 MB → 8.3 MB, ~150 → 46 requests).** `scripts/optimize-assets.mjs` builds `public/` from the
-original Poly Haven files in `assets-src/`: each model becomes one `.glb` (geometry + textures in one request)
-with WebP textures (512 px for small props, 1K for large furniture) and meshopt-compressed geometry; room
-textures become WebP; the HDR environment map is downsampled to 256×128 (it's only used at 12% for faint
-reflections). Measured on the production build: playable after ~11 s on fast 4G, ~47 s on slow 4G (1.6 Mbps).
-
-**Startup.** Compiling the shader programs is most of the remaining wait. The title screen appears as soon as
-the downloads finish and the shaders compile behind it (the buttons say *Preparing the house…* until they're
-done). Per-shader error checking is off outside debug mode, since it forces each compile to finish on the spot,
-and glass materials are converted from `MeshPhysicalMaterial` to `MeshStandardMaterial` so they share programs.
-
-**Per frame (GPU).**
-- Built-in GPUs (Intel, AMD Radeon Graphics, ...) start at 75% render resolution, then adapt.
-- Tone mapping and sRGB conversion happen inside the fear post-processing shader instead of a separate
-  `OutputPass`: one full-screen pass less per frame.
-- The flashlight's shadow map (re-rendered every frame because the light moves) is 512×512; the moonlight
-  shadow is static and rendered once.
-- Only **2 shadow-casting lights** (flashlight, moonlight). Lamps are short-range `PointLight`s without shadows, sized so they don't leak through walls.
-- All walls are merged into a single mesh (1 draw call); all books are one `InstancedMesh`.
-  The first version used a downloaded book model at ~44k triangles per book, which made the library
-  cost 1,090 draw calls and 1.9M triangles per frame. Instancing brought it to 61 draw calls and 139k triangles.
-- A warm-up pass behind the loading screen uploads every texture and compiles every shader variant,
-  so the first look at an object doesn't freeze the game (it was a 7 s freeze before).
-- Adaptive resolution lowers the render scale when the frame rate stays low (toggle the FPS readout with <kbd>`</kbd>).
-- Raycasts only test registered interactables plus walls.
-- Pixel ratio capped at 1 (then adaptive, down to 0.5).
+1. **Game "membeku" saat pertama kali melihat sebuah objek.** Shader dan tekstur baru di-compile/upload
+   ke GPU saat objek pertama kali terlihat (sempat freeze 7 detik). Solusi: *warm-up pass* yang
+   meng-upload semua tekstur dan me-render setiap ruangan dari beberapa arah sebelum game dimulai,
+   ditambah `renderer.compileAsync`. Supaya tidak menambah waktu tunggu, proses ini berjalan di belakang
+   layar judul.
+2. **Perpustakaan terlalu berat.** Model buku yang diunduh ±44 ribu segitiga per buku, sehingga satu ruangan
+   menjadi 1.090 draw call dan 1,9 juta segitiga per frame. Solusi: buku prosedural dalam satu `InstancedMesh`:
+   61 draw call dan 139 ribu segitiga.
+3. **Kamera melompat saat mouse digerakkan.** Pointer Lock di Windows kadang mengirim lonjakan gerakan mouse
+   yang besar. Solusi: `requestPointerLock({ unadjustedMovement: true })` dan filter lonjakan.
+4. **Sosok bayangan tidak pernah terlihat.** Awalnya muncul di sudut 55–80°, di luar FOV kamera. Solusi:
+   menghitung FOV horizontal dari FOV vertikal dan *aspect ratio*, lalu memunculkan sosok tepat di tepinya.
+5. **Ukuran aset terlalu besar untuk koneksi lambat.** Aset asli Poly Haven 42 MB dalam ±150 file.
+   Solusi: skrip `npm run optimize` (satu `.glb` per model, tekstur WebP, geometri meshopt, HDR diperkecil):
+   **8,3 MB dalam 46 request**. Di 4G lambat (1,6 Mbps) game siap dimainkan dalam ±47 detik.
+6. **GPU bawaan laptop (integrated).** Solusi: resolusi render adaptif (mulai 75% di GPU integrated), satu
+   pass post-processing dihapus (tone mapping digabung ke shader Fear), shadow map senter 512×512, dan hanya
+   2 lampu yang menghasilkan bayangan.
+7. **Petunjuk tanpa merusak suasana.** Playtester merasa progres "0/2" tidak intuitif. Solusi: formulir
+   inspeksi yang menyebutkan nama barang per ruangan, tanpa pernah memberi tahu lokasi atau caranya.
 
 ---
 
-## Project structure
+## Struktur Project
 
 ```
 src/
-├── main.js           bootstrap, render loop, debug mode
-├── config.js         rooms, tuning values, fear tiers
-├── scene.js          renderer, scene, fog, environment, base lights
-├── assets.js         GLTF / texture / HDR loading
-├── house.js          walls, openings, floor, ceiling, window
-├── props.js          furniture placement + procedural story props
-├── doors.js          hinged door (scene graph + animation)
-├── player.js         first-person controller, collision, flashlight
-├── interaction.js    raycaster interaction + inspect view
-├── game.js           state machine, objectives, interactions, endings
-├── fear.js           fear meter
-├── hallucinations.js shadow figures, off-screen shifts, random events
-├── animation.js      tweens, flicker, animation clips
-├── effects.js        post-processing, dust, sparks, dissolve
-├── audio.js          procedural sound
-├── textures.js       canvas-generated textures (notes, portrait, photo…)
-├── ui.js / style.css HUD and screens
+├── main.js           bootstrap, render loop, mode debug
+├── config.js         ruangan, nilai tuning, tingkat Fear
+├── scene.js          renderer, scene, fog, environment, lampu dasar
+├── assets.js         loading GLTF / tekstur / HDR
+├── house.js          dinding, lubang pintu/jendela, lantai, plafon, jendela
+├── props.js          penempatan furnitur + props cerita prosedural
+├── doors.js          pintu berengsel (scene graph + animasi)
+├── player.js         kontrol first-person, collision, senter
+├── interaction.js    interaksi raycaster + tampilan inspect
+├── game.js           state machine, objektif, interaksi, ending
+├── fear.js           meter Fear
+├── hallucinations.js sosok bayangan, perubahan di luar pandangan, kejadian acak
+├── animation.js      tween, kedip lampu, animation clip
+├── effects.js        post-processing, debu, percikan, dissolve
+├── audio.js          suara prosedural
+├── textures.js       tekstur dari canvas (catatan, potret, foto…)
+├── ui.js / style.css HUD dan layar
 scripts/
-└── optimize-assets.mjs  builds public/ from assets-src/ (npm run optimize)
-assets-src/              original Poly Haven files (not deployed)
-public/                  web-ready assets (generated)
-├── models/           one .glb per model
-├── textures/         PBR texture sets (WebP)
-└── environments/     HDR environment map
+└── optimize-assets.mjs  membuat public/ dari assets-src/ (npm run optimize)
+assets-src/              file asli Poly Haven (tidak di-deploy)
+public/                  aset siap web (hasil generate)
+docs/screenshots/        screenshot untuk README
 ```
 
-The design document with the full concept and requirement traceability is in [DESIGN.md](DESIGN.md).
+Dokumen desain lengkap (konsep dan keterkaitan dengan kebutuhan tugas) ada di [DESIGN.md](DESIGN.md).
 
-### Debug mode
+### Optimasi Performa (ringkas)
 
-`http://localhost:5173/?debug` skips the menus. Options: `&cam=x,z,yawDeg[,pitchDeg]`, `&fear=60`
-(hold fear), `&power`, `&flash`, `&lamps`, `&keys`, `&real=0..3`.
+- Unduhan **42 MB → 8,3 MB**, ±150 → 46 request (`scripts/optimize-assets.mjs`).
+- Layar judul muncul segera setelah unduhan selesai; shader di-compile di belakangnya
+  (tombol menampilkan *Preparing the house…* sampai siap).
+- Tone mapping + konversi sRGB digabung ke shader Fear: satu full-screen pass lebih sedikit per frame.
+- Shadow map senter 512×512; bayangan bulan statis (di-render sekali); hanya 2 lampu yang menghasilkan bayangan.
+- Semua dinding digabung menjadi satu mesh; semua buku satu `InstancedMesh`.
+- Resolusi render adaptif (turun saat FPS rendah, naik lagi saat ada ruang); GPU integrated mulai di 75%.
 
 ---
 
-## Originality
+## Orisinalitas
 
-All source code, the scene composition, the gameplay/interaction/animation logic, the UI, the
-shaders, the procedural textures and every sound were written for this project. No game
-template or existing project was used as a base. External content is limited to the CC0 assets
-listed below.
+Seluruh source code, komposisi scene, logika gameplay/interaksi/animasi, UI, shader, tekstur prosedural,
+dan semua suara dibuat untuk project ini. Tidak ada template game atau project lain yang dijadikan dasar.
+Konten eksternal hanya aset CC0 yang tercantum di bawah.
+
+---
 
 ## Asset Credits
 
-All 3D models, textures and the HDRI come from [Poly Haven](https://polyhaven.com) under the
-**CC0** license (public domain).
+Semua model 3D, tekstur, dan HDRI berasal dari [Poly Haven](https://polyhaven.com) dengan lisensi
+**CC0** (domain publik).
 
-| Asset | Author(s) | Source | License |
+| Aset | Pembuat | Sumber | Lisensi |
 |---|---|---|---|
 | Arm Chair 01 | Kirill Sannikov | [polyhaven.com/a/ArmChair_01](https://polyhaven.com/a/ArmChair_01) | CC0 |
 | Chandelier 01 | Kirill Sannikov | [polyhaven.com/a/Chandelier_01](https://polyhaven.com/a/Chandelier_01) | CC0 |
@@ -205,11 +262,11 @@ All 3D models, textures and the HDRI come from [Poly Haven](https://polyhaven.co
 | Wooden Table 02 | Serhii Khromov | [polyhaven.com/a/wooden_table_02](https://polyhaven.com/a/wooden_table_02) | CC0 |
 | Worn Plaster Wall | Dimitrios Savva | [polyhaven.com/a/worn_plaster_wall](https://polyhaven.com/a/worn_plaster_wall) | CC0 |
 
-**Fonts:** [Special Elite](https://fonts.google.com/specimen/Special+Elite) (Astigmatic) and
-[Caveat](https://fonts.google.com/specimen/Caveat) (Impallari Type) via Google Fonts, SIL Open Font License.
+**Font:** [Special Elite](https://fonts.google.com/specimen/Special+Elite) (Astigmatic) dan
+[Caveat](https://fonts.google.com/specimen/Caveat) (Impallari Type) lewat Google Fonts, lisensi SIL Open Font License.
 
-**Audio:** none external. Every sound is synthesized at runtime in `src/audio.js`.
+**Audio:** tidak ada aset eksternal. Semua suara disintesis saat runtime di `src/audio.js`.
 
-**Library:** [three.js](https://threejs.org) (MIT License).
+**Library:** [three.js](https://threejs.org) (lisensi MIT).
 
-The machine-readable list of downloaded assets is in `assets-credits.json`.
+Daftar aset dalam format JSON ada di `assets-credits.json`.

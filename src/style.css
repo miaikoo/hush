@@ -317,6 +317,61 @@ button:hover {
   text-align: center;
 }
 
+/* room headings and the items under them */
+.checklist li.header {
+  margin-top: 6px;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.checklist li.header.done {
+  opacity: 0.4;
+}
+
+.checklist li.row {
+  opacity: 1;
+  padding: 2px 0 2px 6px;
+  gap: 10px;
+}
+
+.checklist li.row .cell {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex: 0 0 48%;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.checklist li.row .cell.done {
+  opacity: 0.45;
+}
+
+.checklist li.row .cell.done .txt {
+  text-decoration: line-through;
+}
+
+/* lines added in pen: your own handwriting */
+.checklist li.hand .txt {
+  font-family: 'Caveat', cursive;
+  font-size: 19px;
+  line-height: 1;
+  color: #1f2b4d;
+}
+
+.checklist li.note {
+  opacity: 0.9;
+  padding-left: 22px;
+  transform: rotate(-1.5deg);
+}
+
+.checklist li.note .box {
+  display: none;
+}
+
 .checklist li.ghost .box {
   color: #5c1d1a;
 }

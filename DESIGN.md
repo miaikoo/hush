@@ -80,13 +80,23 @@ Matches the required Mini Game structure (slide 13):
 
 ```
 14 HOLLOW LANE — INSPECTION
-☐ 1. Check main entrance        → click front door (locked)
-☐ 2. Locate a light source      → take flashlight from coat (Foyer)
-☐ 3. Find a replacement fuse    → read desk note, search bookshelf (Library)
-☐ 4. Restore power              → insert fuse into fuse box (Hallway)
-☐ 5. Find the spare key         → Study (real key among hallucinated fakes)
-☐ 6. Leave                      → unlock front door (Foyer)
+☐ Restore power        → flashlight (coat) → desk note → red books → fuse → fuse box
+FOYER     ☐ Mirror  ☐ Clock
+HALLWAY   ☐ Portrait  ☐ Family photo  ☐ Painting  ☐ Wall damage (= tally marks)
+LIBRARY   ☐ Radio  ☐ Reading desk (= the note)  ☐ Bookshelf (= move the red books)
+STUDY     ☐ Rocking chair  ☐ Music box  ☐ Writing desk (= the note)   (study opens once the power is back)
+☐ Leave                → appears when the form is complete
+  front door locked. from OUTSIDE?   ← your pen note, when you find the door locked
+☐ find a spare key     → Study (real key among hallucinated fakes)
 ```
+
+The HUD form lists the items by name, worded like a real inspection form (playtesters found "0/2"
+counts unintuitive), but never says where they are or how to reach them; the notes in parentheses
+and the power chain are for this document only. The player doesn't discover the lock until the job is done, so the
+first half is calm and uneasy and the lock-in lands as a reveal.
+
+> **As built:** the step-by-step script below is the original plan; the order changed to the inspection
+> form above (lock discovered at the end of the job, keys appear only after that).
 
 ### Step-by-step script
 1. **Foyer (start).** Dark, only moonlight through a window. Player clicks the front door: locked,

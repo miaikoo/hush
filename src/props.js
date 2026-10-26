@@ -429,7 +429,7 @@ export function buildProps({ models, textures, houseMats }) {
   // ================================================================ FOYER
   const console_ = add(alignWall(model('ClassicConsole_01'), 'foyer', 'E', 4.6), true);
   const consoleTop = surfaceY(console_, 2.7, 4.6) ?? 0.95;
-  add(alignWall(model('ornate_mirror_01'), 'foyer', 'E', 4.6, { y: 1.35 }));
+  world.mirrorFrame = add(alignWall(model('ornate_mirror_01'), 'foyer', 'E', 4.6, { y: 1.35 }));
 
   const clock = model('vintage_grandfather_clock_01', true);
   add(alignWall(clock, 'foyer', 'W', 2.35), true);

@@ -124,13 +124,30 @@ export class UI {
     const ul = $('.checklist', this.root);
     ul.innerHTML = '';
     let currentShown = false;
+    const box = (done, text) => `<span class="box">${done ? '✓' : ''}</span><span class="txt">${text}</span>`;
     items.forEach((it) => {
+      if (it.header) {
+        // a room heading on the form
+        const li = el('li', 'header' + (it.done ? ' done' : ''));
+        li.textContent = it.header;
+        ul.appendChild(li);
+        return;
+      }
+      if (it.cells) {
+        // a row of items under a room, each with its own box
+        const li = el('li', 'row');
+        li.innerHTML = it.cells.map((c) => `<span class="cell${c.done ? ' done' : ''}">${box(c.done, c.text)}</span>`).join('');
+        ul.appendChild(li);
+        return;
+      }
       const li = el('li', it.done ? 'done' : '');
-      if (!it.done && !currentShown) {
+      if (!it.done && !it.note && !currentShown) {
         li.classList.add('current');
         currentShown = true;
       }
       if (it.ghost) li.classList.add('ghost');
+      if (it.hand) li.classList.add('hand'); // added by you, in pen
+      if (it.note) li.classList.add('note'); // a remark, not a task
       li.innerHTML = `<span class="box">${it.done ? '✓' : ''}</span><span class="txt">${it.text}</span>`;
       ul.appendChild(li);
     });
